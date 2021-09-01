@@ -1,6 +1,15 @@
 from UGATIT import UGATIT
 import argparse
 from utils import *
+import os
+import sys
+import tempfile
+import torch
+import torch.distributed as dist
+import torch.nn as nn
+import torch.optim as optim
+import torch.multiprocessing as mp
+
 
 """parsing and configuration"""
 
@@ -37,6 +46,8 @@ def parse_args():
     parser.add_argument('--benchmark_flag', type=str2bool, default=False)
     parser.add_argument('--resume', type=str2bool, default=False)
 
+    parser.add_argument('--backend', type=str, default="nccl")
+
     return check_args(parser.parse_args())
 
 """checking arguments"""
@@ -59,12 +70,29 @@ def check_args(args):
         print('batch size must be larger than or equal to one')
     return args
 
+
+def setup(rank, world_size, backend):
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '12355'
+
+    # initialize the process group
+    dist.init_process_group(backend, rank=rank, world_size=world_size)
+
+def cleanup():
+    dist.destroy_process_group()
+
+
 """main"""
-def main():
+def main(rank, world_size):
     # parse arguments
     args = parse_args()
-    if args is None:
-      exit()
+    assert args
+    # if args is None:
+    #   exit()
+    args.rank = rank
+    args.world_size = world_size
+
+    setup(rank, world_size, args.backend)
 
     # open session
     gan = UGATIT(args)
@@ -80,5 +108,13 @@ def main():
         gan.test()
         print(" [*] Test finished!")
 
+    cleanup()
+
+
+
 if __name__ == '__main__':
-    main()
+    world_size = torch.cuda.device_count()
+    mp.spawn(main,
+            args=(world_size,),
+            nprocs=world_size,
+            join=True)

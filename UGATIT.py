@@ -5,6 +5,8 @@ from torch.utils.data import DataLoader
 from networks import *
 from utils import *
 from glob import glob
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data.distributed import DistributedSampler
 
 class UGATIT(object) :
     def __init__(self, args):
@@ -45,6 +47,7 @@ class UGATIT(object) :
         self.img_ch = args.img_ch
 
         self.device = args.device
+        self.world_size = args.world_size
         self.benchmark_flag = args.benchmark_flag
         self.resume = args.resume
 
@@ -101,10 +104,16 @@ class UGATIT(object) :
         self.trainB = ImageFolder(os.path.join('dataset', self.dataset, 'trainB'), train_transform)
         self.testA = ImageFolder(os.path.join('dataset', self.dataset, 'testA'), test_transform)
         self.testB = ImageFolder(os.path.join('dataset', self.dataset, 'testB'), test_transform)
-        self.trainA_loader = DataLoader(self.trainA, batch_size=self.batch_size, shuffle=True)
-        self.trainB_loader = DataLoader(self.trainB, batch_size=self.batch_size, shuffle=True)
-        self.testA_loader = DataLoader(self.testA, batch_size=1, shuffle=False)
-        self.testB_loader = DataLoader(self.testB, batch_size=1, shuffle=False)
+
+        self.trainA_sampler = DistributedSampler(self.trainA, drop_last=True)
+        self.trainB_sampler = DistributedSampler(self.trainB, drop_last=True)
+        self.testA_sampler = DistributedSampler(self.trainA, drop_last=False)
+        self.testB_sampler = DistributedSampler(self.trainB, drop_last=False)
+
+        self.trainA_loader = DataLoader(self.trainA, batch_size=self.batch_size, shuffle=True, sampler=self.trainA_sampler)
+        self.trainB_loader = DataLoader(self.trainB, batch_size=self.batch_size, shuffle=True, sampler=self.trainB_sampler)
+        self.testA_loader = DataLoader(self.testA, batch_size=1, shuffle=False, sampler=self.testA_sampler)
+        self.testB_loader = DataLoader(self.testB, batch_size=1, shuffle=False, sampler=self.testB_sampler)
 
         """ Define Generator, Discriminator """
         self.genA2B = ResnetGenerator(input_nc=3, output_nc=3, ngf=self.ch, n_blocks=self.n_res, img_size=self.img_size, light=self.light).to(self.device)
@@ -113,6 +122,13 @@ class UGATIT(object) :
         self.disGB = Discriminator(input_nc=3, ndf=self.ch, n_layers=7).to(self.device)
         self.disLA = Discriminator(input_nc=3, ndf=self.ch, n_layers=5).to(self.device)
         self.disLB = Discriminator(input_nc=3, ndf=self.ch, n_layers=5).to(self.device)
+
+        self.genA2B = DDP(self.genA2B, device_ids=[self.device])
+        self.genB2A = DDP(self.genB2A, device_ids=[self.device])
+        self.disGA = DDP(self.disGA, device_ids=[self.device])
+        self.disGB = DDP(self.disGB, device_ids=[self.device])
+        self.disLA = DDP(self.disLA, device_ids=[self.device])
+        self.disLB = DDP(self.disLB, device_ids=[self.device])
 
         """ Define Loss """
         self.L1_loss = nn.L1Loss().to(self.device)
@@ -144,6 +160,8 @@ class UGATIT(object) :
         # training loop
         print('training start !')
         start_time = time.time()
+        epochA = 0
+        epochB = 0
         for step in range(start_iter, self.iteration + 1):
             if self.decay_flag and step > (self.iteration // 2):
                 self.G_optim.param_groups[0]['lr'] -= (self.lr / (self.iteration // 2))
@@ -152,12 +170,16 @@ class UGATIT(object) :
             try:
                 real_A, _ = trainA_iter.next()
             except:
+                self.trainA_sampler.set_epoch(epochA)
+                epochA += 1
                 trainA_iter = iter(self.trainA_loader)
                 real_A, _ = trainA_iter.next()
 
             try:
                 real_B, _ = trainB_iter.next()
             except:
+                self.trainB_sampler.set_epoch(epochB)
+                epochB += 1
                 trainB_iter = iter(self.trainB_loader)
                 real_B, _ = trainB_iter.next()
 
@@ -345,6 +367,8 @@ class UGATIT(object) :
                 torch.save(params, os.path.join(self.result_dir, self.dataset + '_params_latest.pt'))
 
     def save(self, dir, step):
+        if self.device != 0:
+            return
         params = {}
         params['genA2B'] = self.genA2B.state_dict()
         params['genB2A'] = self.genB2A.state_dict()
@@ -392,7 +416,7 @@ class UGATIT(object) :
                                   cam(tensor2numpy(fake_A2B2A_heatmap[0]), self.img_size),
                                   RGB2BGR(tensor2numpy(denorm(fake_A2B2A[0])))), 0)
 
-            cv2.imwrite(os.path.join(self.result_dir, self.dataset, 'test', 'A2B_%d.png' % (n + 1)), A2B * 255.0)
+            cv2.imwrite(os.path.join(self.result_dir, self.dataset, 'test', 'A2B_%d.png' % (n * self.world_size + self.device + 1)), A2B * 255.0)
 
         for n, (real_B, _) in enumerate(self.testB_loader):
             real_B = real_B.to(self.device)
@@ -411,4 +435,4 @@ class UGATIT(object) :
                                   cam(tensor2numpy(fake_B2A2B_heatmap[0]), self.img_size),
                                   RGB2BGR(tensor2numpy(denorm(fake_B2A2B[0])))), 0)
 
-            cv2.imwrite(os.path.join(self.result_dir, self.dataset, 'test', 'B2A_%d.png' % (n + 1)), B2A * 255.0)
+            cv2.imwrite(os.path.join(self.result_dir, self.dataset, 'test', 'B2A_%d.png' % (n * self.world_size + self.device + 1)), B2A * 255.0)
