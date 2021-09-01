@@ -69,9 +69,6 @@ def check_args(args):
 
 
 def setup(rank, world_size, backend):
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = str(randint(10000,60000))
-
     # initialize the process group
     print(rank)
     dist.init_process_group(backend, rank=rank, world_size=world_size)
@@ -81,10 +78,10 @@ def cleanup():
 
 
 """main"""
-def main(rank, world_size, args):
+def main(rank, args):
     args.rank = rank
 
-    setup(rank, world_size, args.backend)
+    setup(rank, args.world_size, args.backend)
 
     # open session
     gan = UGATIT(args)
@@ -113,6 +110,9 @@ if __name__ == '__main__':
     world_size = torch.cuda.device_count()
     print(f"world_size = {world_size}")
     args.world_size = world_size
+
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = str(randint(10000,60000))
 
     # linear scaling
     args.iteration //= world_size
