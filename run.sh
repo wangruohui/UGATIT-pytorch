@@ -9,4 +9,4 @@ python main.py \
     --dataset selfie2anime \
     --save_freq 8000 \
     --result_dir $RESULT
-    2>&1 | tee ~/${RESULT}.log
+    2>&1 | tee ${RESULT}/log
