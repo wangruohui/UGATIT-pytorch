@@ -105,6 +105,7 @@ if __name__ == '__main__':
     # parse arguments
     args = parse_args()
     assert args
+    print(args)
 
     # world size  = # GPUs
     world_size = torch.cuda.device_count()
@@ -119,7 +120,8 @@ if __name__ == '__main__':
     args.print_freq //= world_size
     args.save_freq //= world_size
     args.lr *=  world_size
-
+    
+    print("SPAWN")
     mp.spawn(main,
             args=(args, ),
             nprocs=world_size,
