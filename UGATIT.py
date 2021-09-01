@@ -13,7 +13,7 @@ class UGATIT(object) :
         self.light = args.light
 
         if self.light :
-            self.model_name = 'UGATIT_light'
+            self.model_name = f'UGATIT_light_{self.light}'
         else :
             self.model_name = 'UGATIT'
 
@@ -57,31 +57,31 @@ class UGATIT(object) :
 
         if args.rank == 0:
             print()
-    
+
             print("##### Information #####")
             print("# light : ", self.light)
             print("# dataset : ", self.dataset)
             print("# batch_size : ", self.batch_size)
             print("# iteration per epoch : ", self.iteration)
-    
+
             print()
-    
+
             print("##### Generator #####")
             print("# residual blocks : ", self.n_res)
-    
+
             print()
-    
+
             print("##### Discriminator #####")
             print("# discriminator layer : ", self.n_dis)
-    
+
             print()
-    
+
             print("##### Weight #####")
             print("# adv_weight : ", self.adv_weight)
             print("# cycle_weight : ", self.cycle_weight)
             print("# identity_weight : ", self.identity_weight)
             print("# cam_weight : ", self.cam_weight)
-    
+
     ##################################################################################
     # Model
     ##################################################################################
