@@ -2,13 +2,10 @@ from UGATIT import UGATIT
 import argparse
 from utils import *
 import os
-import sys
-import tempfile
 import torch
 import torch.distributed as dist
-import torch.nn as nn
-import torch.optim as optim
 import torch.multiprocessing as mp
+from random import randint
 
 
 """parsing and configuration"""
@@ -73,7 +70,7 @@ def check_args(args):
 
 def setup(rank, world_size, backend):
     os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12355'
+    os.environ['MASTER_PORT'] = str(randint(10000,60000))
 
     # initialize the process group
     print(rank)
