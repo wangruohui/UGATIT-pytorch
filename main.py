@@ -83,7 +83,6 @@ def cleanup():
 """main"""
 def main(rank, world_size, args):
     args.rank = rank
-    args.world_size = world_size
 
     setup(rank, world_size, args.backend)
 
@@ -109,11 +108,19 @@ if __name__ == '__main__':
     # parse arguments
     args = parse_args()
     assert args
-    # if args is None:
-    #   exit()
+
+    # world size  = # GPUs
     world_size = torch.cuda.device_count()
     print(f"world_size = {world_size}")
+    args.world_size = world_size
+
+    # linear scaling
+    args.iteration //= world_size
+    args.print_freq //= world_size
+    args.save_freq //= world_size
+    args.lr *=  world_size
+
     mp.spawn(main,
-            args=(world_size,args),
+            args=(args, ),
             nprocs=world_size,
             join=True)
