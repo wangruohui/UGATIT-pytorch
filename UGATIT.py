@@ -108,8 +108,8 @@ class UGATIT(object) :
 
         self.trainA_sampler = DistributedSampler(self.trainA, drop_last=True)
         self.trainB_sampler = DistributedSampler(self.trainB, drop_last=True)
-        self.testA_sampler = DistributedSampler(self.trainA, drop_last=False)
-        self.testB_sampler = DistributedSampler(self.trainB, drop_last=False)
+        self.testA_sampler = DistributedSampler(self.testA, drop_last=False)
+        self.testB_sampler = DistributedSampler(self.testB, drop_last=False)
 
         self.trainA_loader = DataLoader(self.trainA, batch_size=self.batch_size, sampler=self.trainA_sampler)
         self.trainB_loader = DataLoader(self.trainB, batch_size=self.batch_size, sampler=self.trainB_sampler)
@@ -145,6 +145,11 @@ class UGATIT(object) :
 
     def train(self):
         self.genA2B.train(), self.genB2A.train(), self.disGA.train(), self.disGB.train(), self.disLA.train(), self.disLB.train()
+
+        trainA_iter = iter(self.trainA_loader)
+        trainB_iter = iter(self.trainB_loader)
+        testA_iter = iter(self.testA_loader)
+        testB_iter = iter(self.testB_loader)
 
         start_iter = 1
         if self.resume:
