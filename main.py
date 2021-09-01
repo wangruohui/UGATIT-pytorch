@@ -76,6 +76,7 @@ def setup(rank, world_size, backend):
     os.environ['MASTER_PORT'] = '12355'
 
     # initialize the process group
+    print(rank)
     dist.init_process_group(backend, rank=rank, world_size=world_size)
 
 def cleanup():
@@ -83,12 +84,7 @@ def cleanup():
 
 
 """main"""
-def main(rank, world_size):
-    # parse arguments
-    args = parse_args()
-    assert args
-    # if args is None:
-    #   exit()
+def main(rank, world_size, args):
     args.rank = rank
     args.world_size = world_size
 
@@ -113,8 +109,14 @@ def main(rank, world_size):
 
 
 if __name__ == '__main__':
+    # parse arguments
+    args = parse_args()
+    assert args
+    # if args is None:
+    #   exit()
     world_size = torch.cuda.device_count()
+    print(f"world_size = {world_size}")
     mp.spawn(main,
-            args=(world_size,),
+            args=(world_size,args),
             nprocs=world_size,
             join=True)

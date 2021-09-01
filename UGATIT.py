@@ -46,7 +46,7 @@ class UGATIT(object) :
         self.img_size = args.img_size
         self.img_ch = args.img_ch
 
-        self.device = args.device
+        self.device = args.rank
         self.world_size = args.world_size
         self.benchmark_flag = args.benchmark_flag
         self.resume = args.resume
@@ -55,32 +55,33 @@ class UGATIT(object) :
             print('set benchmark !')
             torch.backends.cudnn.benchmark = True
 
-        print()
-
-        print("##### Information #####")
-        print("# light : ", self.light)
-        print("# dataset : ", self.dataset)
-        print("# batch_size : ", self.batch_size)
-        print("# iteration per epoch : ", self.iteration)
-
-        print()
-
-        print("##### Generator #####")
-        print("# residual blocks : ", self.n_res)
-
-        print()
-
-        print("##### Discriminator #####")
-        print("# discriminator layer : ", self.n_dis)
-
-        print()
-
-        print("##### Weight #####")
-        print("# adv_weight : ", self.adv_weight)
-        print("# cycle_weight : ", self.cycle_weight)
-        print("# identity_weight : ", self.identity_weight)
-        print("# cam_weight : ", self.cam_weight)
-
+        if args.rank == 0:
+            print()
+    
+            print("##### Information #####")
+            print("# light : ", self.light)
+            print("# dataset : ", self.dataset)
+            print("# batch_size : ", self.batch_size)
+            print("# iteration per epoch : ", self.iteration)
+    
+            print()
+    
+            print("##### Generator #####")
+            print("# residual blocks : ", self.n_res)
+    
+            print()
+    
+            print("##### Discriminator #####")
+            print("# discriminator layer : ", self.n_dis)
+    
+            print()
+    
+            print("##### Weight #####")
+            print("# adv_weight : ", self.adv_weight)
+            print("# cycle_weight : ", self.cycle_weight)
+            print("# identity_weight : ", self.identity_weight)
+            print("# cam_weight : ", self.cam_weight)
+    
     ##################################################################################
     # Model
     ##################################################################################
@@ -110,10 +111,10 @@ class UGATIT(object) :
         self.testA_sampler = DistributedSampler(self.trainA, drop_last=False)
         self.testB_sampler = DistributedSampler(self.trainB, drop_last=False)
 
-        self.trainA_loader = DataLoader(self.trainA, batch_size=self.batch_size, shuffle=True, sampler=self.trainA_sampler)
-        self.trainB_loader = DataLoader(self.trainB, batch_size=self.batch_size, shuffle=True, sampler=self.trainB_sampler)
-        self.testA_loader = DataLoader(self.testA, batch_size=1, shuffle=False, sampler=self.testA_sampler)
-        self.testB_loader = DataLoader(self.testB, batch_size=1, shuffle=False, sampler=self.testB_sampler)
+        self.trainA_loader = DataLoader(self.trainA, batch_size=self.batch_size, sampler=self.trainA_sampler)
+        self.trainB_loader = DataLoader(self.trainB, batch_size=self.batch_size, sampler=self.trainB_sampler)
+        self.testA_loader = DataLoader(self.testA, batch_size=1, sampler=self.testA_sampler)
+        self.testB_loader = DataLoader(self.testB, batch_size=1, sampler=self.testB_sampler)
 
         """ Define Generator, Discriminator """
         self.genA2B = ResnetGenerator(input_nc=3, output_nc=3, ngf=self.ch, n_blocks=self.n_res, img_size=self.img_size, light=self.light).to(self.device)
