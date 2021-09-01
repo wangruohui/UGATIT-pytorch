@@ -4,7 +4,8 @@ from torch.nn.parameter import Parameter
 
 
 class ResnetGenerator(nn.Module):
-    def __init__(self, input_nc, output_nc, ngf=64, n_blocks=6, img_size=256, light=False):
+    def __init__(self, input_nc, output_nc, ngf=64, n_blocks=6, img_size=256, light=4):
+        print(light)
         assert(n_blocks >= 0)
         super(ResnetGenerator, self).__init__()
         self.input_nc = input_nc
@@ -42,7 +43,7 @@ class ResnetGenerator(nn.Module):
 
         # Gamma, Beta block
         if self.light:
-            FC = [nn.Linear(ngf * mult, ngf * mult, bias=False),
+            FC = [nn.Linear(ngf * mult * self.light ** 2, ngf * mult, bias=False),
                   nn.ReLU(True),
                   nn.Linear(ngf * mult, ngf * mult, bias=False),
                   nn.ReLU(True)]
@@ -96,7 +97,9 @@ class ResnetGenerator(nn.Module):
         heatmap = torch.sum(x, dim=1, keepdim=True)
 
         if self.light:
-            x_ = torch.nn.functional.adaptive_avg_pool2d(x, 1)
+#            print(x.shape)
+#            import pdb; pdb.set_trace()
+            x_ = torch.nn.functional.adaptive_avg_pool2d(x, self.light)
             x_ = self.FC(x_.view(x_.shape[0], -1))
         else:
             x_ = self.FC(x.view(x.shape[0], -1))
