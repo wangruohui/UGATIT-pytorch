@@ -8,6 +8,21 @@ from glob import glob
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 
+def _like(tensor, func, d):
+    s = tensor.shape
+    try:
+        return d[s]
+    except KeyError:
+        one = func(tensor)
+        d[s] = one
+        return one
+
+def ones_like(tensor, d={}):
+    return _like(tensor, torch.ones_like, d)
+
+def zeros_like(tensor, d={}):
+    return _like(tensor, torch.zeros_like, d)
+
 class UGATIT(object) :
     def __init__(self, args):
         self.light = args.light
@@ -207,14 +222,14 @@ class UGATIT(object) :
             fake_GB_logit, fake_GB_cam_logit, _ = self.disGB(fake_A2B)
             fake_LB_logit, fake_LB_cam_logit, _ = self.disLB(fake_A2B)
 
-            D_ad_loss_GA = self.MSE_loss(real_GA_logit, torch.ones_like(real_GA_logit)) + self.MSE_loss(fake_GA_logit, torch.zeros_like(fake_GA_logit))
-            D_ad_cam_loss_GA = self.MSE_loss(real_GA_cam_logit, torch.ones_like(real_GA_cam_logit)) + self.MSE_loss(fake_GA_cam_logit, torch.zeros_like(fake_GA_cam_logit))
-            D_ad_loss_LA = self.MSE_loss(real_LA_logit, torch.ones_like(real_LA_logit)) + self.MSE_loss(fake_LA_logit, torch.zeros_like(fake_LA_logit))
-            D_ad_cam_loss_LA = self.MSE_loss(real_LA_cam_logit, torch.ones_like(real_LA_cam_logit)) + self.MSE_loss(fake_LA_cam_logit, torch.zeros_like(fake_LA_cam_logit))
-            D_ad_loss_GB = self.MSE_loss(real_GB_logit, torch.ones_like(real_GB_logit)) + self.MSE_loss(fake_GB_logit, torch.zeros_like(fake_GB_logit))
-            D_ad_cam_loss_GB = self.MSE_loss(real_GB_cam_logit, torch.ones_like(real_GB_cam_logit)) + self.MSE_loss(fake_GB_cam_logit, torch.zeros_like(fake_GB_cam_logit))
-            D_ad_loss_LB = self.MSE_loss(real_LB_logit, torch.ones_like(real_LB_logit)) + self.MSE_loss(fake_LB_logit, torch.zeros_like(fake_LB_logit))
-            D_ad_cam_loss_LB = self.MSE_loss(real_LB_cam_logit, torch.ones_like(real_LB_cam_logit)) + self.MSE_loss(fake_LB_cam_logit, torch.zeros_like(fake_LB_cam_logit))
+            D_ad_loss_GA = self.MSE_loss(real_GA_logit, ones_like(real_GA_logit)) + self.MSE_loss(fake_GA_logit, zeros_like(fake_GA_logit))
+            D_ad_cam_loss_GA = self.MSE_loss(real_GA_cam_logit, ones_like(real_GA_cam_logit)) + self.MSE_loss(fake_GA_cam_logit, zeros_like(fake_GA_cam_logit))
+            D_ad_loss_LA = self.MSE_loss(real_LA_logit, ones_like(real_LA_logit)) + self.MSE_loss(fake_LA_logit, zeros_like(fake_LA_logit))
+            D_ad_cam_loss_LA = self.MSE_loss(real_LA_cam_logit, ones_like(real_LA_cam_logit)) + self.MSE_loss(fake_LA_cam_logit, zeros_like(fake_LA_cam_logit))
+            D_ad_loss_GB = self.MSE_loss(real_GB_logit, ones_like(real_GB_logit)) + self.MSE_loss(fake_GB_logit, zeros_like(fake_GB_logit))
+            D_ad_cam_loss_GB = self.MSE_loss(real_GB_cam_logit, ones_like(real_GB_cam_logit)) + self.MSE_loss(fake_GB_cam_logit, zeros_like(fake_GB_cam_logit))
+            D_ad_loss_LB = self.MSE_loss(real_LB_logit, ones_like(real_LB_logit)) + self.MSE_loss(fake_LB_logit, zeros_like(fake_LB_logit))
+            D_ad_cam_loss_LB = self.MSE_loss(real_LB_cam_logit, ones_like(real_LB_cam_logit)) + self.MSE_loss(fake_LB_cam_logit, zeros_like(fake_LB_cam_logit))
 
             D_loss_A = self.adv_weight * (D_ad_loss_GA + D_ad_cam_loss_GA + D_ad_loss_LA + D_ad_cam_loss_LA)
             D_loss_B = self.adv_weight * (D_ad_loss_GB + D_ad_cam_loss_GB + D_ad_loss_LB + D_ad_cam_loss_LB)
@@ -241,14 +256,14 @@ class UGATIT(object) :
             fake_GB_logit, fake_GB_cam_logit, _ = self.disGB(fake_A2B)
             fake_LB_logit, fake_LB_cam_logit, _ = self.disLB(fake_A2B)
 
-            G_ad_loss_GA = self.MSE_loss(fake_GA_logit, torch.ones_like(fake_GA_logit))
-            G_ad_cam_loss_GA = self.MSE_loss(fake_GA_cam_logit, torch.ones_like(fake_GA_cam_logit))
-            G_ad_loss_LA = self.MSE_loss(fake_LA_logit, torch.ones_like(fake_LA_logit))
-            G_ad_cam_loss_LA = self.MSE_loss(fake_LA_cam_logit, torch.ones_like(fake_LA_cam_logit))
-            G_ad_loss_GB = self.MSE_loss(fake_GB_logit, torch.ones_like(fake_GB_logit))
-            G_ad_cam_loss_GB = self.MSE_loss(fake_GB_cam_logit, torch.ones_like(fake_GB_cam_logit))
-            G_ad_loss_LB = self.MSE_loss(fake_LB_logit, torch.ones_like(fake_LB_logit))
-            G_ad_cam_loss_LB = self.MSE_loss(fake_LB_cam_logit, torch.ones_like(fake_LB_cam_logit))
+            G_ad_loss_GA = self.MSE_loss(fake_GA_logit, ones_like(fake_GA_logit))
+            G_ad_cam_loss_GA = self.MSE_loss(fake_GA_cam_logit, ones_like(fake_GA_cam_logit))
+            G_ad_loss_LA = self.MSE_loss(fake_LA_logit, ones_like(fake_LA_logit))
+            G_ad_cam_loss_LA = self.MSE_loss(fake_LA_cam_logit, ones_like(fake_LA_cam_logit))
+            G_ad_loss_GB = self.MSE_loss(fake_GB_logit, ones_like(fake_GB_logit))
+            G_ad_cam_loss_GB = self.MSE_loss(fake_GB_cam_logit, ones_like(fake_GB_cam_logit))
+            G_ad_loss_LB = self.MSE_loss(fake_LB_logit, ones_like(fake_LB_logit))
+            G_ad_cam_loss_LB = self.MSE_loss(fake_LB_cam_logit, ones_like(fake_LB_cam_logit))
 
             G_recon_loss_A = self.L1_loss(fake_A2B2A, real_A)
             G_recon_loss_B = self.L1_loss(fake_B2A2B, real_B)
@@ -257,12 +272,12 @@ class UGATIT(object) :
                 G_identity_loss_A = self.L1_loss(fake_A2A, real_A)
                 G_identity_loss_B = self.L1_loss(fake_B2B, real_B)
 
-            G_cam_loss_A = self.BCE_loss(fake_B2A_cam_logit, torch.ones_like(fake_B2A_cam_logit))
-            G_cam_loss_B = self.BCE_loss(fake_A2B_cam_logit, torch.ones_like(fake_A2B_cam_logit))
+            G_cam_loss_A = self.BCE_loss(fake_B2A_cam_logit, ones_like(fake_B2A_cam_logit))
+            G_cam_loss_B = self.BCE_loss(fake_A2B_cam_logit, ones_like(fake_A2B_cam_logit))
 
             if self.identity_weight > 0:
-                G_cam_loss_A += self.BCE_loss(fake_A2A_cam_logit, torch.zeros_like(fake_A2A_cam_logit))
-                G_cam_loss_B += self.BCE_loss(fake_B2B_cam_logit, torch.zeros_like(fake_B2B_cam_logit))
+                G_cam_loss_A += self.BCE_loss(fake_A2A_cam_logit, zeros_like(fake_A2A_cam_logit))
+                G_cam_loss_B += self.BCE_loss(fake_B2B_cam_logit, zeros_like(fake_B2B_cam_logit))
 
             G_loss_A = self.adv_weight * (G_ad_loss_GA + G_ad_cam_loss_GA + G_ad_loss_LA + G_ad_cam_loss_LA) + self.cycle_weight * G_recon_loss_A + self.cam_weight * G_cam_loss_A
             G_loss_B = self.adv_weight * (G_ad_loss_GB + G_ad_cam_loss_GB + G_ad_loss_LB + G_ad_cam_loss_LB) + self.cycle_weight * G_recon_loss_B + self.cam_weight * G_cam_loss_B
