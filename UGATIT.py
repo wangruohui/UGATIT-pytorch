@@ -316,14 +316,15 @@ class UGATIT(object) :
                         real_B, _ = trainB_iter.next()
                     real_A, real_B = real_A.to(self.device), real_B.to(self.device)
 
-                    fake_A2B, _, fake_A2B_heatmap = self.genA2B(real_A)
-                    fake_B2A, _, fake_B2A_heatmap = self.genB2A(real_B)
+                    with torch.no_grad():
+                        fake_A2B, _, fake_A2B_heatmap = self.genA2B(real_A)
+                        fake_B2A, _, fake_B2A_heatmap = self.genB2A(real_B)
 
-                    fake_A2B2A, _, fake_A2B2A_heatmap = self.genB2A(fake_A2B)
-                    fake_B2A2B, _, fake_B2A2B_heatmap = self.genA2B(fake_B2A)
+                        fake_A2B2A, _, fake_A2B2A_heatmap = self.genB2A(fake_A2B)
+                        fake_B2A2B, _, fake_B2A2B_heatmap = self.genA2B(fake_B2A)
 
-                    fake_A2A, _, fake_A2A_heatmap = self.genB2A(real_A)
-                    fake_B2B, _, fake_B2B_heatmap = self.genA2B(real_B)
+                        fake_A2A, _, fake_A2A_heatmap = self.genB2A(real_A)
+                        fake_B2B, _, fake_B2B_heatmap = self.genA2B(real_B)
 
                     A2B = np.concatenate((A2B, np.concatenate((RGB2BGR(tensor2numpy(denorm(real_A[0]))),
                                                                cam(tensor2numpy(fake_A2A_heatmap[0]), self.img_size),
@@ -355,14 +356,15 @@ class UGATIT(object) :
                         real_B, _ = testB_iter.next()
                     real_A, real_B = real_A.to(self.device), real_B.to(self.device)
 
-                    fake_A2B, _, fake_A2B_heatmap = self.genA2B(real_A)
-                    fake_B2A, _, fake_B2A_heatmap = self.genB2A(real_B)
+                    with torch.no_grad():
+                        fake_A2B, _, fake_A2B_heatmap = self.genA2B(real_A)
+                        fake_B2A, _, fake_B2A_heatmap = self.genB2A(real_B)
 
-                    fake_A2B2A, _, fake_A2B2A_heatmap = self.genB2A(fake_A2B)
-                    fake_B2A2B, _, fake_B2A2B_heatmap = self.genA2B(fake_B2A)
+                        fake_A2B2A, _, fake_A2B2A_heatmap = self.genB2A(fake_A2B)
+                        fake_B2A2B, _, fake_B2A2B_heatmap = self.genA2B(fake_B2A)
 
-                    fake_A2A, _, fake_A2A_heatmap = self.genB2A(real_A)
-                    fake_B2B, _, fake_B2B_heatmap = self.genA2B(real_B)
+                        fake_A2A, _, fake_A2A_heatmap = self.genB2A(real_A)
+                        fake_B2B, _, fake_B2B_heatmap = self.genA2B(real_B)
 
                     A2B = np.concatenate((A2B, np.concatenate((RGB2BGR(tensor2numpy(denorm(real_A[0]))),
                                                                cam(tensor2numpy(fake_A2A_heatmap[0]), self.img_size),
