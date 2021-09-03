@@ -296,6 +296,7 @@ class UGATIT(object) :
 
             print("[%5d/%5d] time: %4.4f d_loss: %.8f, g_loss: %.8f" % (step, self.iteration, time.time() - start_time, Discriminator_loss, Generator_loss))
             if step % self.print_freq == 0:
+                print("print_freq")
                 train_sample_num = 5
                 test_sample_num = 5
                 A2B = np.zeros((self.img_size * 7, 0, 3))
@@ -387,17 +388,8 @@ class UGATIT(object) :
                 self.genA2B.train(), self.genB2A.train(), self.disGA.train(), self.disGB.train(), self.disLA.train(), self.disLB.train()
 
             if step % self.save_freq == 0:
+                print("save_freq")
                 self.save(os.path.join(self.result_dir, self.dataset, 'model'), step)
-
-            if step % 1000 == 0:
-                params = {}
-                params['genA2B'] = self.genA2B.state_dict()
-                params['genB2A'] = self.genB2A.state_dict()
-                params['disGA'] = self.disGA.state_dict()
-                params['disGB'] = self.disGB.state_dict()
-                params['disLA'] = self.disLA.state_dict()
-                params['disLB'] = self.disLB.state_dict()
-                torch.save(params, os.path.join(self.result_dir, self.dataset + '_params_latest.pt'))
 
     def save(self, dir, step):
         if self.device != 0:
