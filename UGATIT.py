@@ -253,8 +253,9 @@ class UGATIT(object) :
             G_recon_loss_A = self.L1_loss(fake_A2B2A, real_A)
             G_recon_loss_B = self.L1_loss(fake_B2A2B, real_B)
 
-            G_identity_loss_A = self.L1_loss(fake_A2A, real_A)
-            G_identity_loss_B = self.L1_loss(fake_B2B, real_B)
+            if self.identity_weight > 0:
+                G_identity_loss_A = self.L1_loss(fake_A2A, real_A)
+                G_identity_loss_B = self.L1_loss(fake_B2B, real_B)
 
             G_cam_loss_A = self.BCE_loss(fake_B2A_cam_logit, torch.ones_like(fake_B2A_cam_logit))
             G_cam_loss_B = self.BCE_loss(fake_A2B_cam_logit, torch.ones_like(fake_A2B_cam_logit))
