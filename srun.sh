@@ -15,6 +15,7 @@ srun -p $PARTITION \
     python main.py \
         --light 8 \
         --dataset selfie2anime \
-        --save_freq 8000 \
+        --save_freq 40000 \
+        --identity_weight 0 \
         --result_dir $RESULT \
     2>&1 | tee ${RESULT}.log
