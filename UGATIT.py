@@ -250,6 +250,10 @@ class UGATIT(object) :
             if self.identity_weight > 0:
                 fake_A2A, fake_A2A_cam_logit, _ = self.genB2A(real_A)
                 fake_B2B, fake_B2B_cam_logit, _ = self.genA2B(real_B)
+            else:
+                _, fake_A2A_cam_logit, _ = self.genB2A(real_A, cam_only=True)
+                _, fake_B2B_cam_logit, _ = self.genA2B(real_B, cam_only=True)
+
 
             fake_GA_logit, fake_GA_cam_logit, _ = self.disGA(fake_B2A)
             fake_LA_logit, fake_LA_cam_logit, _ = self.disLA(fake_B2A)
@@ -272,12 +276,8 @@ class UGATIT(object) :
                 G_identity_loss_A = self.L1_loss(fake_A2A, real_A)
                 G_identity_loss_B = self.L1_loss(fake_B2B, real_B)
 
-            G_cam_loss_A = self.BCE_loss(fake_B2A_cam_logit, ones_like(fake_B2A_cam_logit))
-            G_cam_loss_B = self.BCE_loss(fake_A2B_cam_logit, ones_like(fake_A2B_cam_logit))
-
-            if self.identity_weight > 0:
-                G_cam_loss_A += self.BCE_loss(fake_A2A_cam_logit, zeros_like(fake_A2A_cam_logit))
-                G_cam_loss_B += self.BCE_loss(fake_B2B_cam_logit, zeros_like(fake_B2B_cam_logit))
+            G_cam_loss_A = self.BCE_loss(fake_B2A_cam_logit, ones_like(fake_B2A_cam_logit)) + self.BCE_loss(fake_A2A_cam_logit, zeros_like(fake_A2A_cam_logit))
+            G_cam_loss_B = self.BCE_loss(fake_A2B_cam_logit, ones_like(fake_A2B_cam_logit)) + self.BCE_loss(fake_B2B_cam_logit, zeros_like(fake_B2B_cam_logit))
 
             G_loss_A = self.adv_weight * (G_ad_loss_GA + G_ad_cam_loss_GA + G_ad_loss_LA + G_ad_cam_loss_LA) + self.cycle_weight * G_recon_loss_A + self.cam_weight * G_cam_loss_A
             G_loss_B = self.adv_weight * (G_ad_loss_GB + G_ad_cam_loss_GB + G_ad_loss_LB + G_ad_cam_loss_LB) + self.cycle_weight * G_recon_loss_B + self.cam_weight * G_cam_loss_B
