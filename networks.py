@@ -76,7 +76,7 @@ class ResnetGenerator(nn.Module):
         self.FC = nn.Sequential(*FC)
         self.UpBlock2 = nn.Sequential(*UpBlock2)
 
-    def forward(self, input, cam_only=True):
+    def forward(self, input, cam_only=False):
         x = self.DownBlock(input)
 
         gap = torch.nn.functional.adaptive_avg_pool2d(x, 1)
