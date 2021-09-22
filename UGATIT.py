@@ -5,6 +5,18 @@ from torch.utils.data import DataLoader
 from networks import *
 from utils import *
 from glob import glob
+import torch
+from typing import Dict, Any
+
+
+def remove_module(state_dict, prefix='module.'):
+    keys = sorted(state_dict.keys())
+    for key in keys:
+        if key.startswith(prefix):
+            newkey = key[len(prefix) :]
+            state_dict[newkey] = state_dict.pop(key)
+
+    return state_dict
 
 class UGATIT(object) :
     def __init__(self, args):
@@ -85,9 +97,10 @@ class UGATIT(object) :
     def build_model(self):
         """ DataLoader """
         train_transform = transforms.Compose([
-            transforms.RandomHorizontalFlip(),
-            transforms.Resize((self.img_size + 30, self.img_size+30)),
-            transforms.RandomCrop(self.img_size),
+            # transforms.RandomHorizontalFlip(),
+            # transforms.Resize((self.img_size + 30, self.img_size+30)),
+            # transforms.RandomCrop(self.img_size),
+            transforms.CenterCrop(self.img_size),
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
@@ -97,10 +110,10 @@ class UGATIT(object) :
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
         ])
 
-        self.trainA = ImageFolder(os.path.join('dataset', self.dataset, 'trainA'), train_transform)
-        self.trainB = ImageFolder(os.path.join('dataset', self.dataset, 'trainB'), train_transform)
-        self.testA = ImageFolder(os.path.join('dataset', self.dataset, 'testA'), test_transform)
-        self.testB = ImageFolder(os.path.join('dataset', self.dataset, 'testB'), test_transform)
+        self.trainA = ImageFolder(os.path.join('dataset', 'YOUR_DATASET_NAME', 'trainA'), train_transform)
+        self.trainB = ImageFolder(os.path.join('dataset', 'YOUR_DATASET_NAME', 'trainB'), train_transform)
+        self.testA = ImageFolder(os.path.join('dataset', 'YOUR_DATASET_NAME', 'testA'), test_transform)
+        self.testB = ImageFolder(os.path.join('dataset', 'YOUR_DATASET_NAME', 'testB'), test_transform)
         self.trainA_loader = DataLoader(self.trainA, batch_size=self.batch_size, shuffle=True)
         self.trainB_loader = DataLoader(self.trainB, batch_size=self.batch_size, shuffle=True)
         self.testA_loader = DataLoader(self.testA, batch_size=1, shuffle=False)
@@ -120,8 +133,8 @@ class UGATIT(object) :
         self.BCE_loss = nn.BCEWithLogitsLoss().to(self.device)
 
         """ Trainer """
-        self.G_optim = torch.optim.Adam(itertools.chain(self.genA2B.parameters(), self.genB2A.parameters()), lr=self.lr, betas=(0.5, 0.999), weight_decay=self.weight_decay)
-        self.D_optim = torch.optim.Adam(itertools.chain(self.disGA.parameters(), self.disGB.parameters(), self.disLA.parameters(), self.disLB.parameters()), lr=self.lr, betas=(0.5, 0.999), weight_decay=self.weight_decay)
+        # self.G_optim = torch.optim.Adam(itertools.chain(self.genA2B.parameters(), self.genB2A.parameters()), lr=self.lr, betas=(0.5, 0.999), weight_decay=self.weight_decay)
+        # self.D_optim = torch.optim.Adam(itertools.chain(self.disGA.parameters(), self.disGB.parameters(), self.disLA.parameters(), self.disLB.parameters()), lr=self.lr, betas=(0.5, 0.999), weight_decay=self.weight_decay)
 
         """ Define Rho clipper to constraint the value of rho in AdaILN and ILN"""
         self.Rho_clipper = RhoClipper(0, 1)
@@ -144,7 +157,7 @@ class UGATIT(object) :
         # training loop
         print('training start !')
         start_time = time.time()
-        for step in range(start_iter, self.iteration + 1):
+        for step in range(start_iter, 10):
             if self.decay_flag and step > (self.iteration // 2):
                 self.G_optim.param_groups[0]['lr'] -= (self.lr / (self.iteration // 2))
                 self.D_optim.param_groups[0]['lr'] -= (self.lr / (self.iteration // 2))
@@ -162,12 +175,35 @@ class UGATIT(object) :
                 real_B, _ = trainB_iter.next()
 
             real_A, real_B = real_A.to(self.device), real_B.to(self.device)
+            # torch.save((real_A, real_B), '../imgs.pt')
+            # print(real_A)
+            # print(real_B)
+            # print(real_A.size())
+            # print(real_B.size())
+            # import cv2
+            # img_a = real_A.cpu().numpy().squeeze().transpose(1,2,0) *127.5 + 127.5
+            # img_b = real_B.cpu().numpy().squeeze().transpose(1,2,0) *127.5 + 127.5
+            # cv2.imwrite('../a-ug.png', img_a[:,:,::-1])
+            # cv2.imwrite('../b-ug.png', img_b[:,:,::-1])
+            # exit()
+            # real_A = torch.zeros_like(real_A)
+            # real_B = torch.zeros_like(real_B)
 
             # Update D
-            self.D_optim.zero_grad()
+            # self.D_optim.zero_grad()
 
             fake_A2B, _, _ = self.genA2B(real_A)
             fake_B2A, _, _ = self.genB2A(real_B)
+            # print(fake_A2B)
+            # print(fake_B2A)
+            # print(fake_A2B.size())
+            # print(fake_B2A.size())
+            # import cv2
+            # img_a = fake_A2B.cpu().numpy().squeeze().transpose(1,2,0) *127.5 + 127.5
+            # img_b = fake_B2A.cpu().numpy().squeeze().transpose(1,2,0) *127.5 + 127.5
+            # # cv2.imwrite('../fa2b-ug.png', img_a[:,:,::-1])
+            # # cv2.imwrite('../fb2a-ug.png', img_b[:,:,::-1])
+            # exit()
 
             real_GA_logit, real_GA_cam_logit, _ = self.disGA(real_A)
             real_LA_logit, real_LA_cam_logit, _ = self.disLA(real_A)
@@ -192,11 +228,11 @@ class UGATIT(object) :
             D_loss_B = self.adv_weight * (D_ad_loss_GB + D_ad_cam_loss_GB + D_ad_loss_LB + D_ad_cam_loss_LB)
 
             Discriminator_loss = D_loss_A + D_loss_B
-            Discriminator_loss.backward()
-            self.D_optim.step()
+            # Discriminator_loss.backward()
+            # self.D_optim.step()
 
             # Update G
-            self.G_optim.zero_grad()
+            # self.G_optim.zero_grad()
 
             fake_A2B, fake_A2B_cam_logit, _ = self.genA2B(real_A)
             fake_B2A, fake_B2A_cam_logit, _ = self.genB2A(real_B)
@@ -234,8 +270,8 @@ class UGATIT(object) :
             G_loss_B = self.adv_weight * (G_ad_loss_GB + G_ad_cam_loss_GB + G_ad_loss_LB + G_ad_cam_loss_LB) + self.cycle_weight * G_recon_loss_B + self.identity_weight * G_identity_loss_B + self.cam_weight * G_cam_loss_B
 
             Generator_loss = G_loss_A + G_loss_B
-            Generator_loss.backward()
-            self.G_optim.step()
+            # Generator_loss.backward()
+            # self.G_optim.step()
 
             # clip parameter of AdaILN and ILN, applied after optimizer step
             self.genA2B.apply(self.Rho_clipper)
@@ -356,12 +392,12 @@ class UGATIT(object) :
 
     def load(self, dir, step):
         params = torch.load(os.path.join(dir, self.dataset + '_params_%07d.pt' % step))
-        self.genA2B.load_state_dict(params['genA2B'])
-        self.genB2A.load_state_dict(params['genB2A'])
-        self.disGA.load_state_dict(params['disGA'])
-        self.disGB.load_state_dict(params['disGB'])
-        self.disLA.load_state_dict(params['disLA'])
-        self.disLB.load_state_dict(params['disLB'])
+        self.genA2B.load_state_dict(remove_module(params['genA2B']))
+        self.genB2A.load_state_dict(remove_module(params['genB2A']))
+        self.disGA.load_state_dict(remove_module(params['disGA']))
+        self.disGB.load_state_dict(remove_module(params['disGB']))
+        self.disLA.load_state_dict(remove_module(params['disLA']))
+        self.disLB.load_state_dict(remove_module(params['disLB']))
 
     def test(self):
         model_list = glob(os.path.join(self.result_dir, self.dataset, 'model', '*.pt'))

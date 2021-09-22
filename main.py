@@ -72,6 +72,8 @@ def main():
     # build graph
     gan.build_model()
 
+    gan.load('C:/Users/WRH/Desktop/result-0901-234745/selfie2anime/test/', 250000)
+
     if args.phase == 'train' :
         gan.train()
         print(" [*] Training finished!")
@@ -81,4 +83,6 @@ def main():
         print(" [*] Test finished!")
 
 if __name__ == '__main__':
-    main()
+    import torch
+    with torch.no_grad():
+        main()
