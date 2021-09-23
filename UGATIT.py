@@ -16,6 +16,17 @@ def remove_module(state_dict, prefix='module.'):
             newkey = key[len(prefix) :]
             state_dict[newkey] = state_dict.pop(key)
 
+    # keys = sorted(state_dict.keys())
+    # for key in keys:
+    #     if key.endswith('_u') or key.endswith('_v'):
+    #         print(state_dict.pop(key).shape)
+    #         continue
+
+    #     if key.endswith('_orig'):
+    #         newkey = key[: -5]
+    #         state_dict[newkey] = state_dict.pop(key)
+    #         print(state_dict[newkey].shape)
+
     return state_dict
 
 class UGATIT(object) :
@@ -60,9 +71,9 @@ class UGATIT(object) :
         self.benchmark_flag = args.benchmark_flag
         self.resume = args.resume
 
-        if torch.backends.cudnn.enabled and self.benchmark_flag:
-            print('set benchmark !')
-            torch.backends.cudnn.benchmark = True
+        # if torch.backends.cudnn.enabled and self.benchmark_flag:
+        #     print('set benchmark !')
+        #     torch.backends.cudnn.benchmark = True
 
         print()
 
@@ -133,13 +144,16 @@ class UGATIT(object) :
         self.BCE_loss = nn.BCEWithLogitsLoss().to(self.device)
 
         """ Trainer """
-        # self.G_optim = torch.optim.Adam(itertools.chain(self.genA2B.parameters(), self.genB2A.parameters()), lr=self.lr, betas=(0.5, 0.999), weight_decay=self.weight_decay)
-        # self.D_optim = torch.optim.Adam(itertools.chain(self.disGA.parameters(), self.disGB.parameters(), self.disLA.parameters(), self.disLB.parameters()), lr=self.lr, betas=(0.5, 0.999), weight_decay=self.weight_decay)
+        self.G_optim = torch.optim.Adam(itertools.chain(self.genA2B.parameters(), self.genB2A.parameters()), lr=self.lr, betas=(0.5, 0.999), weight_decay=self.weight_decay)
+        self.D_optim = torch.optim.Adam(itertools.chain(self.disGA.parameters(), self.disGB.parameters(), self.disLA.parameters(), self.disLB.parameters()), lr=self.lr, betas=(0.5, 0.999), weight_decay=self.weight_decay)
+        # print(self.G_optim)
+        # print(self.D_optim)
 
         """ Define Rho clipper to constraint the value of rho in AdaILN and ILN"""
         self.Rho_clipper = RhoClipper(0, 1)
 
     def train(self):
+        # self.genA2B.eval(), self.genB2A.eval(), self.disGA.eval(), self.disGB.eval(), self.disLA.eval(), self.disLB.eval()
         self.genA2B.train(), self.genB2A.train(), self.disGA.train(), self.disGB.train(), self.disLA.train(), self.disLB.train()
 
         start_iter = 1
@@ -157,25 +171,27 @@ class UGATIT(object) :
         # training loop
         print('training start !')
         start_time = time.time()
-        for step in range(start_iter, 10):
+        for step in range(start_iter, 6):
             if self.decay_flag and step > (self.iteration // 2):
                 self.G_optim.param_groups[0]['lr'] -= (self.lr / (self.iteration // 2))
                 self.D_optim.param_groups[0]['lr'] -= (self.lr / (self.iteration // 2))
 
-            try:
-                real_A, _ = trainA_iter.next()
-            except:
-                trainA_iter = iter(self.trainA_loader)
-                real_A, _ = trainA_iter.next()
+            # try:
+            #     real_A, _ = trainA_iter.next()
+            # except:
+            #     trainA_iter = iter(self.trainA_loader)
+            #     real_A, _ = trainA_iter.next()
 
-            try:
-                real_B, _ = trainB_iter.next()
-            except:
-                trainB_iter = iter(self.trainB_loader)
-                real_B, _ = trainB_iter.next()
+            # try:
+            #     real_B, _ = trainB_iter.next()
+            # except:
+            #     trainB_iter = iter(self.trainB_loader)
+            #     real_B, _ = trainB_iter.next()
 
-            real_A, real_B = real_A.to(self.device), real_B.to(self.device)
+            # real_A, real_B = real_A.to(self.device), real_B.to(self.device)
             # torch.save((real_A, real_B), '../imgs.pt')
+            real_A, real_B = torch.load('../imgs.pt', map_location='cpu')
+            # real_A = real_B = torch.zeros(1, 3, 256, 256)
             # print(real_A)
             # print(real_B)
             # print(real_A.size())
@@ -190,7 +206,7 @@ class UGATIT(object) :
             # real_B = torch.zeros_like(real_B)
 
             # Update D
-            # self.D_optim.zero_grad()
+            self.D_optim.zero_grad()
 
             fake_A2B, _, _ = self.genA2B(real_A)
             fake_B2A, _, _ = self.genB2A(real_B)
@@ -228,11 +244,11 @@ class UGATIT(object) :
             D_loss_B = self.adv_weight * (D_ad_loss_GB + D_ad_cam_loss_GB + D_ad_loss_LB + D_ad_cam_loss_LB)
 
             Discriminator_loss = D_loss_A + D_loss_B
-            # Discriminator_loss.backward()
-            # self.D_optim.step()
+            Discriminator_loss.backward()
+            self.D_optim.step()
 
             # Update G
-            # self.G_optim.zero_grad()
+            self.G_optim.zero_grad()
 
             fake_A2B, fake_A2B_cam_logit, _ = self.genA2B(real_A)
             fake_B2A, fake_B2A_cam_logit, _ = self.genB2A(real_B)
@@ -270,8 +286,8 @@ class UGATIT(object) :
             G_loss_B = self.adv_weight * (G_ad_loss_GB + G_ad_cam_loss_GB + G_ad_loss_LB + G_ad_cam_loss_LB) + self.cycle_weight * G_recon_loss_B + self.identity_weight * G_identity_loss_B + self.cam_weight * G_cam_loss_B
 
             Generator_loss = G_loss_A + G_loss_B
-            # Generator_loss.backward()
-            # self.G_optim.step()
+            Generator_loss.backward()
+            self.G_optim.step()
 
             # clip parameter of AdaILN and ILN, applied after optimizer step
             self.genA2B.apply(self.Rho_clipper)

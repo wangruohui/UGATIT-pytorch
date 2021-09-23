@@ -72,7 +72,8 @@ def main():
     # build graph
     gan.build_model()
 
-    gan.load('C:/Users/WRH/Desktop/result-0901-234745/selfie2anime/test/', 250000)
+    # gan.load('C:/Users/WRH/Desktop/result-0901-234745/selfie2anime/test/', 250000)
+    gan.load('.', 250000)
 
     if args.phase == 'train' :
         gan.train()
@@ -83,6 +84,9 @@ def main():
         print(" [*] Test finished!")
 
 if __name__ == '__main__':
-    import torch
-    with torch.no_grad():
-        main()
+    from mmcv.runner import set_random_seed
+    set_random_seed(2021, deterministic=True)
+    torch.backends.cudnn.benchmark = False
+    torch.use_deterministic_algorithms(True)
+    torch.backends.cudnn.deterministic = True
+    main()
