@@ -21,8 +21,8 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.0001, help='The learning rate')
     parser.add_argument('--weight_decay', type=float, default=0.0001, help='The weight decay')
     parser.add_argument('--adv_weight', type=int, default=1, help='Weight for GAN')
-    parser.add_argument('--cycle_weight', type=int, default=10, help='Weight for Cycle')
-    parser.add_argument('--identity_weight', type=int, default=10, help='Weight for Identity')
+    parser.add_argument('--cycle_weight', type=float, default=10, help='Weight for Cycle')
+    parser.add_argument('--identity_weight', type=float, default=10, help='Weight for Identity')
     parser.add_argument('--cam_weight', type=int, default=1000, help='Weight for CAM')
 
     parser.add_argument('--ch', type=int, default=64, help='base channel number per layer')
@@ -84,8 +84,8 @@ def main():
         print(" [*] Test finished!")
 
 if __name__ == '__main__':
-    from mmcv.runner import set_random_seed
-    set_random_seed(2021, deterministic=True)
+    import torch
+    torch.manual_seed(200)
     torch.backends.cudnn.benchmark = False
     torch.use_deterministic_algorithms(True)
     torch.backends.cudnn.deterministic = True
