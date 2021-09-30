@@ -155,6 +155,8 @@ class UGATIT(object) :
     def train(self):
         # self.genA2B.eval(), self.genB2A.eval(), self.disGA.eval(), self.disGB.eval(), self.disLA.eval(), self.disLB.eval()
         self.genA2B.train(), self.genB2A.train(), self.disGA.train(), self.disGB.train(), self.disLA.train(), self.disLB.train()
+        # self.genA2B.eval(), self.genB2A.eval()
+        self.disGA.train(), self.disGB.train(), self.disLA.train(), self.disLB.train()
 
         start_iter = 1
         if self.resume:
@@ -245,7 +247,7 @@ class UGATIT(object) :
 
             Discriminator_loss = D_loss_A + D_loss_B
             Discriminator_loss.backward()
-            # self.D_optim.step()
+            self.D_optim.step()
 
             # Update G
             self.G_optim.zero_grad()
@@ -282,12 +284,25 @@ class UGATIT(object) :
             G_cam_loss_A = self.BCE_loss(fake_B2A_cam_logit, torch.ones_like(fake_B2A_cam_logit).to(self.device)) + self.BCE_loss(fake_A2A_cam_logit, torch.zeros_like(fake_A2A_cam_logit).to(self.device))
             G_cam_loss_B = self.BCE_loss(fake_A2B_cam_logit, torch.ones_like(fake_A2B_cam_logit).to(self.device)) + self.BCE_loss(fake_B2B_cam_logit, torch.zeros_like(fake_B2B_cam_logit).to(self.device))
 
-            G_loss_A =  self.adv_weight * (G_ad_loss_GA + G_ad_cam_loss_GA + G_ad_loss_LA + G_ad_cam_loss_LA) + self.cycle_weight * G_recon_loss_A + self.identity_weight * G_identity_loss_A + self.cam_weight * G_cam_loss_A
-            G_loss_B = self.adv_weight * (G_ad_loss_GB + G_ad_cam_loss_GB + G_ad_loss_LB + G_ad_cam_loss_LB) + self.cycle_weight * G_recon_loss_B + self.identity_weight * G_identity_loss_B + self.cam_weight * G_cam_loss_B
+            # G_loss_A = self.adv_weight * (G_ad_loss_GA + G_ad_cam_loss_GA + G_ad_loss_LA + G_ad_cam_loss_LA) + self.cycle_weight * G_recon_loss_A + self.identity_weight * G_identity_loss_A + self.cam_weight * G_cam_loss_A
+            # G_loss_B = self.adv_weight * (G_ad_loss_GB + G_ad_cam_loss_GB + G_ad_loss_LB + G_ad_cam_loss_LB) + self.cycle_weight * G_recon_loss_B + self.identity_weight * G_identity_loss_B + self.cam_weight * G_cam_loss_B
+
+            G_loss_A = (
+                self.adv_weight * (G_ad_loss_GA + G_ad_cam_loss_GA + G_ad_loss_LA + G_ad_cam_loss_LA)
+                +self.cycle_weight * G_recon_loss_A
+                +self.identity_weight * G_identity_loss_A
+                +self.cam_weight * G_cam_loss_A
+                )
+            G_loss_B = (
+                self.adv_weight * (G_ad_loss_GB + G_ad_cam_loss_GB + G_ad_loss_LB + G_ad_cam_loss_LB)
+                +self.cycle_weight * G_recon_loss_B
+                +self.identity_weight * G_identity_loss_B
+                +self.cam_weight * G_cam_loss_B
+                )
 
             Generator_loss = G_loss_A + G_loss_B
             Generator_loss.backward()
-            # self.G_optim.step()
+            self.G_optim.step()
 
             # clip parameter of AdaILN and ILN, applied after optimizer step
             self.genA2B.apply(self.Rho_clipper)
@@ -391,15 +406,19 @@ class UGATIT(object) :
 
             # if step % 1000 == 0:
             params = {}
+            grad_dict = {}
             for module in ['genA2B', 'genB2A', 'disGA', 'disGB', 'disLA', 'disLB']:
-                for k, v in getattr(self, module).state_dict().items():
+                m = getattr(self, module)
+                for (k, v), p in zip(m.state_dict().items(), m.parameters()):
                     key = f'{module}.{k}'
                     assert key not in params
                     params[key] = v
+                    grad_dict[key] = p.grad
 
-            torch.save(params, f'debug-params-step{step}')
-            torch.save(self.D_optim.state_dict(), f'debug-optimD-step{step}')
-            torch.save(self.G_optim.state_dict(), f'debug-optimG-step{step}')
+            # torch.save(params, f'debug-params-step{step}')
+            # # torch.save(self.D_optim.state_dict(), f'debug-optimD-step{step}')
+            # # torch.save(self.G_optim.state_dict(), f'debug-optimG-step{step}')
+            # torch.save(grad_dict, f'debug-grad-step{step}')
 
     def save(self, dir, step):
         params = {}
