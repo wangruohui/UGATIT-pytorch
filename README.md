@@ -1,3 +1,5 @@
+This modification supports distributed training
+
 ## U-GAT-IT &mdash; Official PyTorch Implementation
 ### : Unsupervised Generative Attentional Networks with Adaptive Layer-Instance Normalization for Image-to-Image Translation
 
